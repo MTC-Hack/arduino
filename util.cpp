@@ -68,7 +68,7 @@ void sd_init() {
   Serial.println("card initialized.");
 }
 
-void sd_write_to_file(char *filename, char *data){
+void sd_write_to_file(char *filename, char *data) {
   File dataFile = SD.open(filename, FILE_WRITE);
   // if the file is available, write to it:
   if (dataFile) {
@@ -81,11 +81,119 @@ void sd_write_to_file(char *filename, char *data){
   }
 }
 
-void fuelmeter_init(){
+void fuelmeter_init() {
   pinMode(FUEL_PIN, OUTPUT);
 }
 
-uint16_t fuelmeter_get(){
+uint16_t fuelmeter_get() {
   return analogRead(FUEL_PIN);
+}
+
+void wifi_init() {
+  Serial1.begin(115200);
+}
+
+void wifi_send(char *buf) {
+  Serial.print("Sending packet via wi-fi: ");
+  Serial.println(buf);
+  Serial1.println(buf);
+}
+
+
+
+void InitLORA() {
+  int e ;
+  // Power ON the module
+  e = sx1272.ON();
+  Serial.print(F("Setting power ON: state "));
+  Serial.println(e, DEC);
+
+  // Set transmission mode and print the result
+  e = sx1272.setMode(1);
+  Serial.print(F("Setting Mode: state "));
+  Serial.println(e, DEC);
+
+  // Set header
+  e = sx1272.setHeaderON();
+  Serial.print(F("Setting Header ON: state "));
+  Serial.println(e, DEC);
+
+  // Select frequency channel
+  e = sx1272.setChannel(CH_10_868);
+  Serial.print(F("Setting Channel: state "));
+  Serial.println(e, DEC);
+
+  // Set CRC
+  e = sx1272.setCRC_ON();
+  Serial.print(F("Setting CRC ON: state "));
+  Serial.println(e, DEC);
+
+  // Select output power (Max, High or Low)
+  e = sx1272.setPower('x');
+  Serial.print(F("Setting Power: state "));
+  Serial.println(e, DEC);
+
+  // Set the node address and print the result
+  e = sx1272.setNodeAddress(2);
+  Serial.print(F("Setting node address: state "));
+  Serial.println(e, DEC);
+
+  // Print a success message
+  Serial.println(F("SX1272 successfully configured"));
+  Serial.println();
+}
+
+bool lora_receive(uint8_t receive_buffer[]) {
+  bool received = false;
+  int e;
+  uint16_t w_timer = 10000;
+  e = sx1272.receivePacketTimeout(w_timer);
+  // if packet was received?
+  if (!e) {
+    uint8_t tmp_length;
+    sx1272.getSNR();
+    sx1272.getRSSIpacket();
+    tmp_length = sx1272._payloadlength;
+    for (int i = 0; i < tmp_length; i++)
+      receive_buffer[i] = sx1272.packet_received.data[i];
+#ifdef DEBUG
+    if (tmp_length) {
+      Serial.print("Received:");
+      for (int i = 0; i < tmp_length; i++)
+        Serial.print(((uint8_t)sx1272.packet_received.data[i]));
+      Serial.print(" ");
+    }
+    Serial.println();
+#endif
+    received = true;
+  }
+  return received;
+}
+
+bool get_ACK() {
+  uint8_t receive_buffer[10];
+  lora_receive(receive_buffer);
+  if (receive_buffer[0] == 'O' && receive_buffer[1] == 'K'){
+    //Serial.println("LORA ACK");
+    return true;
+  }
+  else
+    return false;
+}
+
+void send_data(char *buf) {
+  int e ;
+  e = sx1272.sendPacketTimeout(3, buf);
+  if (!get_ACK())
+    wifi_send(buf);
+  else
+    print_lora_sent(buf);
+}
+
+
+void print_lora_sent(char *packet) {
+  Serial.print("Packet: ");
+  Serial.print(packet);
+  Serial.println(" sended by LoRa!");
 }
 

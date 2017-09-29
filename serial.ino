@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "SX1272.h"
+
 #include "util.h"
 
 #define READ_BUFFER_SIZE 100
@@ -44,7 +44,7 @@ void send_OBD_cmd(char *obd_cmd) {
   retries = 0;
   ClearBuffer();
   if (!(obd_error_flag)) {
-   // Serial.println("obd_error_flag=false");
+    // Serial.println("obd_error_flag=false");
     prompt = false;
     retries = 0;
     while ((!prompt)  && (retries < OBD_CMD_RETRIES)) {
@@ -55,17 +55,17 @@ void send_OBD_cmd(char *obd_cmd) {
       Serial.println("before while");
       while (BTSerial.available() <= 0);
       Serial.println("after while");
-     // Serial.println(BTSerial.available());
+      // Serial.println(BTSerial.available());
       while ((BTSerial.available() > 0) && (!prompt)) {
         recvChar = BTSerial.read();
         bufin[i] = recvChar;
-       // Serial.print("recvchar=");
-       // Serial.println(recvChar);
+        // Serial.print("recvchar=");
+        // Serial.println(recvChar);
         i++;
         if (recvChar == 62) {
           prompt = true;
           bufin[i] = '\0';
-       }
+        }
       }
 
       retries = retries + 1;
@@ -76,51 +76,12 @@ void send_OBD_cmd(char *obd_cmd) {
       Serial.println("Troubles with OBD-II connection!");
     }
   }
- /* else
-    Serial.println("obd_error_flag==true");*/
+  /* else
+     Serial.println("obd_error_flag==true");*/
   Serial.println(bufin);
 }
 
-void InitLORA() {
-  // Power ON the module
-  e = sx1272.ON();
-  Serial.print(F("Setting power ON: state "));
-  Serial.println(e, DEC);
 
-  // Set transmission mode and print the result
-  e = sx1272.setMode(1);
-  Serial.print(F("Setting Mode: state "));
-  Serial.println(e, DEC);
-
-  // Set header
-  e = sx1272.setHeaderON();
-  Serial.print(F("Setting Header ON: state "));
-  Serial.println(e, DEC);
-
-  // Select frequency channel
-  e = sx1272.setChannel(CH_10_868);
-  Serial.print(F("Setting Channel: state "));
-  Serial.println(e, DEC);
-
-  // Set CRC
-  e = sx1272.setCRC_ON();
-  Serial.print(F("Setting CRC ON: state "));
-  Serial.println(e, DEC);
-
-  // Select output power (Max, High or Low)
-  e = sx1272.setPower('x');
-  Serial.print(F("Setting Power: state "));
-  Serial.println(e, DEC);
-
-  // Set the node address and print the result
-  e = sx1272.setNodeAddress(2);
-  Serial.print(F("Setting node address: state "));
-  Serial.println(e, DEC);
-
-  // Print a success message
-  Serial.println(F("SX1272 successfully configured"));
-  Serial.println();
-}
 
 void InitOBD() {
   Serial.println("initob");
@@ -543,18 +504,13 @@ void setup() {
   InitOBD();
   mpu6050_init();
   delay(3000);
- // rtc_config();
- // sd_init();
+  // rtc_config();
+  // sd_init();
   fuelmeter_init();
+  wifi_init();
 }
 
 int i = 0;
-
-void print_lora_sent(char *packet) {
-  Serial.print("Packet: ");
-  Serial.print(packet);
-  Serial.println(" sended by LoRa!");
-}
 
 void loop() {
   char buf[100];
@@ -585,29 +541,28 @@ void loop() {
     } else {
       String errors = getDTC();
       //1-пакет: ид, номер пакета, время (пока не работает), ошибки
-     // sd_write_to_file("datalog.txt", "***START OF DATA TRANSMISSION");
-      snprintf(buf, sizeof(buf), "%s_1_%d_%s", globalVin, 0, errors.c_str());
-      e = sx1272.sendPacketTimeout(3, buf);
-     // sd_write_to_file("datalog.txt", buf);
-      print_lora_sent(buf);
+      // sd_write_to_file("datalog.txt", "***START OF DATA TRANSMISSION");
+      snprintf(buf, sizeof(buf), "%s_1_%d_%s", globalVin, -1, errors.c_str());
+      send_data(buf);
+      // sd_write_to_file("datalog.txt", buf);
+      
       //2-пакет: ид, номер пакета, время (пока не работает), скорость, maf, обороты/мин
-      snprintf(buf, sizeof(buf), "%s_2_%d_%s_%s_%s", globalVin, 0, String(speed_calc()).c_str(),  String(maf_calc()).c_str(),  String(rpm_calc()).c_str());
-      e = sx1272.sendPacketTimeout(3, buf);
-      //sd_write_to_file("datalog.txt", buf);
-      print_lora_sent(buf);
+      snprintf(buf, sizeof(buf), "%s_2_%d_%s_%s_%s", globalVin, -1, String(speed_calc()).c_str(),  String(maf_calc()).c_str(),  String(rpm_calc()).c_str());
+      send_data(buf);
+      
       //3-пакет: ид, номер пакета, время (пока не работает), скорость, широта, долгота
-      snprintf(buf, sizeof(buf), "%s_3_%d_%s_%s_%s", globalVin, 0, String(gps_get_spd()).c_str(), String(gps_get_lat()).c_str(), String(gps_get_long()).c_str());
-      e = sx1272.sendPacketTimeout(3, buf);
-     // sd_write_to_file("datalog.txt", buf);
-      print_lora_sent(buf);
+      snprintf(buf, sizeof(buf), "%s_3_%d_%s_%s_%s", globalVin, -1, String(gps_get_spd()).c_str(), String(gps_get_lat()).c_str(), String(gps_get_long()).c_str());
+      send_data(buf);
+      
       //4-пакет: ид, номер пакета, время (пока не работает), уровень топлива, 3 параметра акселерометра, 3 параметра гироскопа
       int16_t data[6];
       mpu6050_get_all(data);
-      snprintf(buf, sizeof(buf), "%s_4_%d_%d_%d_%d_%d_%d_%d_%d", globalVin, 0, fuelmeter_get(), data[0], data[1], data[2], data[3], data[4], data[5]);
-      e = sx1272.sendPacketTimeout(3, buf);
-     // sd_write_to_file("datalog.txt", buf);
-      print_lora_sent(buf);
-     // sd_write_to_file("datalog.txt", "***END OF DATA TRANSMISSION");
+      snprintf(buf, sizeof(buf), "%s_4_%d_%d_%d_%d_%d_%d_%d_%d", globalVin, -1, fuelmeter_get(), data[0], data[1], data[2], data[3], data[4], data[5]);
+      send_data(buf);
+      
+      snprintf(buf, sizeof(buf), "%s_5_%d_%s", globalVin, -1, String(rpm_calc()).c_str());
+      send_data(buf);
+      // sd_write_to_file("datalog.txt", "***END OF DATA TRANSMISSION");
     }
   }
   if (obd_error_flag) {

@@ -1,6 +1,7 @@
 #include <TroykaRTC.h>
 #include <Wire.h>
 #include <SD.h>
+#include "SX1272.h"
 //#include <SPI.h>
 
 #include <stdint.h>
@@ -29,3 +30,17 @@ void sd_write_to_file(char *filename, char *data);
 void fuelmeter_init();
 
 uint16_t fuelmeter_get();
+
+void wifi_init();
+
+void wifi_send(char *buf);
+
+void InitLORA();
+
+bool lora_receive(uint8_t receive_buffer[]);
+
+bool get_ACK();
+
+void send_data(char *buf);
+
+void print_lora_sent(char *packet);
