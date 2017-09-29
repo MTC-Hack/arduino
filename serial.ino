@@ -543,7 +543,9 @@ void setup() {
   InitOBD();
   mpu6050_init();
   delay(3000);
-  rtc_config();
+ // rtc_config();
+ // sd_init();
+  fuelmeter_init();
 }
 
 int i = 0;
@@ -583,23 +585,29 @@ void loop() {
     } else {
       String errors = getDTC();
       //1-пакет: ид, номер пакета, время (пока не работает), ошибки
+     // sd_write_to_file("datalog.txt", "***START OF DATA TRANSMISSION");
       snprintf(buf, sizeof(buf), "%s_1_%d_%s", globalVin, 0, errors.c_str());
       e = sx1272.sendPacketTimeout(3, buf);
+     // sd_write_to_file("datalog.txt", buf);
       print_lora_sent(buf);
       //2-пакет: ид, номер пакета, время (пока не работает), скорость, maf, обороты/мин
       snprintf(buf, sizeof(buf), "%s_2_%d_%s_%s_%s", globalVin, 0, String(speed_calc()).c_str(),  String(maf_calc()).c_str(),  String(rpm_calc()).c_str());
       e = sx1272.sendPacketTimeout(3, buf);
+      //sd_write_to_file("datalog.txt", buf);
       print_lora_sent(buf);
       //3-пакет: ид, номер пакета, время (пока не работает), скорость, широта, долгота
       snprintf(buf, sizeof(buf), "%s_3_%d_%s_%s_%s", globalVin, 0, String(gps_get_spd()).c_str(), String(gps_get_lat()).c_str(), String(gps_get_long()).c_str());
       e = sx1272.sendPacketTimeout(3, buf);
+     // sd_write_to_file("datalog.txt", buf);
       print_lora_sent(buf);
       //4-пакет: ид, номер пакета, время (пока не работает), уровень топлива, 3 параметра акселерометра, 3 параметра гироскопа
       int16_t data[6];
       mpu6050_get_all(data);
-      snprintf(buf, sizeof(buf), "%s_4_%d_%s_%d_%d_%d_%d_%d_%d", globalVin, 0, String(23.54).c_str(), data[0], data[1], data[2], data[3], data[4], data[5]);
+      snprintf(buf, sizeof(buf), "%s_4_%d_%d_%d_%d_%d_%d_%d_%d", globalVin, 0, fuelmeter_get(), data[0], data[1], data[2], data[3], data[4], data[5]);
       e = sx1272.sendPacketTimeout(3, buf);
+     // sd_write_to_file("datalog.txt", buf);
       print_lora_sent(buf);
+     // sd_write_to_file("datalog.txt", "***END OF DATA TRANSMISSION");
     }
   }
   if (obd_error_flag) {

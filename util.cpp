@@ -1,9 +1,9 @@
 #include "util.h"
 
-const int MPU_addr=0x68;  // I2C address of the MPU-6050
-int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
+const int MPU_addr = 0x68; // I2C address of the MPU-6050
+int16_t AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ;
 
-void mpu6050_init(){
+void mpu6050_init() {
   Wire.begin();
   Wire.beginTransmission(MPU_addr);
   Wire.write(0x6B);  // PWR_MGMT_1 register
@@ -11,18 +11,18 @@ void mpu6050_init(){
   Wire.endTransmission(true);
 }
 
-void mpu6050_get_all(int16_t data[6]){
+void mpu6050_get_all(int16_t data[6]) {
   Wire.beginTransmission(MPU_addr);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
-  Wire.requestFrom(MPU_addr,14,true);  // request a total of 14 registers
-  data[0]=Wire.read()<<8|Wire.read();  // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L) AcX
-  data[1]=Wire.read()<<8|Wire.read();  // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L) AcY
-  data[2]=Wire.read()<<8|Wire.read();  // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L) AcZ
-  Wire.read()<<8|Wire.read();  // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L) 
-  data[3]=Wire.read()<<8|Wire.read();  // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L) GyX
-  data[4]=Wire.read()<<8|Wire.read();  // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L) GyY
-  data[5]=Wire.read()<<8|Wire.read();  // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L) GyZ
+  Wire.requestFrom(MPU_addr, 14, true); // request a total of 14 registers
+  data[0] = Wire.read() << 8 | Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L) AcX
+  data[1] = Wire.read() << 8 | Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L) AcY
+  data[2] = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L) AcZ
+  Wire.read() << 8 | Wire.read(); // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)
+  data[3] = Wire.read() << 8 | Wire.read(); // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L) GyX
+  data[4] = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L) GyY
+  data[5] = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L) GyZ
 }
 
 float gps_get_lat() {
@@ -54,5 +54,38 @@ void rtc_config() {
 
 uint32_t rtc_get_time() {
   return clock.getUnixTime();
+}
+
+void sd_init() {
+  Serial.print("Initializing SD card...");
+  pinMode(CS_PIN, OUTPUT);
+  // see if the card is present and can be initialized:
+  if (!SD.begin(CS_PIN)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
+}
+
+void sd_write_to_file(char *filename, char *data){
+  File dataFile = SD.open(filename, FILE_WRITE);
+  // if the file is available, write to it:
+  if (dataFile) {
+    dataFile.println(data);
+    dataFile.close();
+  }
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.println("error opening file");
+  }
+}
+
+void fuelmeter_init(){
+  pinMode(FUEL_PIN, OUTPUT);
+}
+
+uint16_t fuelmeter_get(){
+  return analogRead(FUEL_PIN);
 }
 
